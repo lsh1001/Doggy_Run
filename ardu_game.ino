@@ -1,23 +1,46 @@
-#include <Wire.h>
+#define SSD1306_I2C
+
+#include "bitmaps.h"
+#include <SPI.h> 
+#include <Wire.h> 
 #include "Adafruit_GFX.h"
 #include "Adafruit_SSD1306.h"
-#include "bitmaps.h"
 #include "InputController.h"
 
-#define OLED_RESET 8
+#ifndef SSD1306_I2C
+  #define CLK  13
+  #define MOSI  11
+  #define CS  6
+  #define DC  4
+  #define RST 12
+  Adafruit_SSD1306 display(MOSI, CLK, DC, RST, CS);
+#else
+  #define OLED_RESET 8
+  Adafruit_SSD1306 display(OLED_RESET);
+#endif
 
 #define FULL_LOGO 0
 #define ARDU_LOGO 1
 #define X_LOGO    2
 #define PNL_LOGO  3
 
+// Display variables
+int HEIGHT = 64;
+int WIDTH = 128;
+int gameFPS = 1000/10;
+
+// Time variables
+unsigned long lTime;
+
+// Game status
 #define STATUS_MENU 0
 #define STATUS_CREDIT 1
 
-int gameState = STATUS_MENU;    // Pause or not
-boolean gameEnd = false;
-unsigned long startTime = 0;
+int gameState = STATUS_MENU; // Pause or not
+int gameScore = 0;
+int gameHighScore = 0;
 
+// Input
 #define BUTTON_A 5
 #define BUTTON_B 6
 InputController inputController;
@@ -32,35 +55,38 @@ bool up, down, left, right, aBut, bBut;
 int prevMenu = MENU_MAX;
 int currentMenu = 0;
 
-// Time variables
-unsigned long lTime;
-unsigned long iTime;
-int gameFPS = 1000/10; 
-int inputTIME = 1000/4;
-
 PROGMEM char* const stringTable[] = {
   "Start game",
   "Options",
   "Credit"
 };
 
-Adafruit_SSD1306 display(OLED_RESET);
-
+// Utilities
+int getOffset(int s);
+void initUserInput();
 void stopUntilUserInput();
 void setMenuMode();
-void initUserInput();
+void setGameMode();
+void setResultMode();
+void setCreditMode();
 
-void setup(){
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-
+void setup() {
+  // initialize display
+#ifndef SSD1306_12C
+  SPI.begin();
+  display.begin(SSD1306_SWITCHCAPVCC);
+#else
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // initialize with the I2C addr 0x3D (for the 128x64)
+#endif
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  
-  // set button pins as INPUT_PULLUP
-  pinMode(BUTTON_A,INPUT_PULLUP);
-  pinMode(BUTTON_B,INPUT_PULLUP);
 
-  for(int i=0; i<37; i=i+2) {
+  //set buttons pins as INPUT_PULLUP
+  pinMode(BUTTON_A, INPUT_PULLUP);
+  pinMode(BUTTON_B, INPUT_PULLUP);
+
+  // display startup animation
+   for(int i=0; i<37; i=i+2) {
     display.clearDisplay();
     display.drawBitmap(i,32, logo[ARDU_LOGO], 40,8,1);
     display.drawBitmap(71,i-3, logo[X_LOGO], 8,8,1);
@@ -87,23 +113,21 @@ void setup(){
   display.drawBitmap(0,0,background1,64,64,1);
   display.drawBitmap(64,0,background2,64,64,1);
   display.display();
-
+  
   stopUntilUserInput();    // Wait until user touch the button
 
   setMenuMode();  // Menu mode
+ 
 }
-void loop(){
-  if(millis()> iTime + inputTIME){
-    iTime = millis();
-    
-    uint8_t input = inputController.getInput();  // Get input status
-    if (input & (1<<5)) left = true;
-    if (input & (1<<4)) up = true;
-    if (input & (1<<3)) right = true;
-    if (input & (1<<2)) down = true;
-    if (input & (1<<1)) aBut = true;  // a button
-    if (input & (1<<0)) bBut = true;  // b button
-  }
+
+void loop() {
+  uint8_t input = inputController.getInput();  // Get input status
+  if (input & (1<<5)) left = true;
+  if (input & (1<<4)) up = true;
+  if (input & (1<<3)) right = true;
+  if (input & (1<<2)) down = true;
+  if (input & (1<<1)) aBut = true;  // a button
+  if (input & (1<<0)) bBut = true;  // b button
 
   if (millis() > lTime + gameFPS) {
     lTime = millis();
@@ -114,19 +138,18 @@ void loop(){
       if(currentMenu > MENU_MAX) currentMenu = MENU_MAX;
       if(currentMenu < MENU_MIN) currentMenu = MENU_MIN;
       
-      // User selected one of menu
       if(aBut || bBut) {
-          if(currentMenu == MENU_CREDIT) {
-            setCreditMode();
-        }
-        else if(currentMenu == MENU_START) {
-//          setGameMode();
-        }
-        else if(currentMenu == MENU_OPTION) {
-//          setOptionMode();
-        }
-      } 
-      // Menu navigation
+            if(currentMenu == MENU_CREDIT) {
+    //          setCreditMode();
+          }
+          else if(currentMenu == MENU_START) {
+    //          setGameMode();
+          }
+          else if(currentMenu == MENU_OPTION) {
+    //          setOptionMode();
+          }
+      }
+       // Menu navigation
       else {
         if(prevMenu != currentMenu) {
           prevMenu = currentMenu;   // Remember current menu index
@@ -164,9 +187,18 @@ void loop(){
   }
 }
 
+void initUserInput() {
+  left = false;
+  up = false;
+  right = false;
+  down = false;
+  aBut = false; // a button
+  bBut = false; // b button
+}
+
 void stopUntilUserInput() {
   while (true) {  // While we wait for input
-    if (digitalRead(BUTTON_A) == LOW) {  // Wait for a button press
+    if (digitalRead(BUTTON_A) == LOW || digitalRead(BUTTON_B) == LOW) {  // Wait for a button press
       break;
     }
     delay(200);  // Slight delay the loop
@@ -185,11 +217,5 @@ void setCreditMode() {
   delay(200);
 }
 
-void initUserInput() {
-  left = false;
-  up = false;
-  right = false;
-  down = false;
-  aBut = false; // a button
-  bBut = false; // b button
-}
+
+
