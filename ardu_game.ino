@@ -35,6 +35,7 @@ unsigned long lTime;
 // Game status
 #define STATUS_MENU 0
 #define STATUS_CREDIT 1
+#define STATUS_PLAYING 2
 
 int gameState = STATUS_MENU; // Pause or not
 int gameScore = 0;
@@ -61,6 +62,59 @@ PROGMEM char* const stringTable[] = {
   "Credit"
 };
 
+boolean drawBg = true;
+
+// Object parameters
+#define OBSTACLE_MAX 3
+#define OBSTACLE_MOVE 3
+#define OBSTACLE_WIDTH 3
+#define OBSTACLE_HEIGHT 4
+#define OBS_POS_Y 59
+#define OBSTACLE_DEL_THRESHOLD 5
+int obstacleX[] = {0, 0, 0};
+int obstacleCount = 0;
+unsigned long obstacleTime;
+
+#define ENEMY_MAX 1
+#define ENEMY_DELAY 4000
+#define ENEMY_MOVE 2
+#define ENEMY_WIDTH 32
+#define ENEMY_HEIGHT 32
+#define ENEMY_POS_Y 30
+#define ENEMY_START_X 128
+#define ENEMY_RUN_IMAGE_INDEX 0
+#define ENEMY_DIE_IMAGE_INDEX 1
+int enemyX[] = {0};
+int prevEnemyPosX[] = {0};
+int enemyCount = 0;
+unsigned long enemyTime;
+
+#define BULLET_MAX 2
+#define BULLET_MOVE 3
+#define BULLET_WIDTH 3
+#define BULLET_POS_Y 48
+#define BULLET_START_X 44
+int bulletX[] = {0, 0};
+int prevBulletPosX[] = {0, 0};
+int bulletCount = 0;
+unsigned long bulletTime;
+
+#define BONE_MAX 3
+#define BONE_MOVE 4
+#define BONE_WIDTH 16
+#define BONE_HEIGHT 16
+#define BONE_POS_Y 10
+#define BONE_START_X 128
+#define BONE_DEL_THRESHOLD 10
+int boneX[] = {0, 0, 0};
+int prevBonePosX[] = {0, 0, 0};
+int boneCount = 0;
+unsigned long boneTime;
+
+void draw();
+void checkInput();
+void updateMove();
+
 // Utilities
 int getOffset(int s);
 void initUserInput();
@@ -69,6 +123,8 @@ void setMenuMode();
 void setGameMode();
 void setResultMode();
 void setCreditMode();
+
+unsigned long getRandTime();
 
 void setup() {
   // initialize display
@@ -140,10 +196,10 @@ void loop() {
       
       if(aBut || bBut) {
             if(currentMenu == MENU_CREDIT) {
-    //          setCreditMode();
+              setCreditMode();
           }
           else if(currentMenu == MENU_START) {
-    //          setGameMode();
+              setGameMode();
           }
           else if(currentMenu == MENU_OPTION) {
     //          setOptionMode();
@@ -166,6 +222,20 @@ void loop() {
         }
       }
     }
+    else if (gameState == STATUS_PLAYING) { // If the game is playing
+      // Run game engine
+      checkInput();
+      updateMove();
+//    checkCollision();
+      
+      // Draw game screen
+      draw();
+      
+      // Exit condition
+//    if(charStatus == CHAR_DIE) {
+//      setResultMode();
+//    }
+    }
     else if (gameState == STATUS_CREDIT) {  // If the game is paused
       display.clearDisplay();
       display.drawBitmap(5,28,lobby,32,32,1);
@@ -186,6 +256,176 @@ void loop() {
     initUserInput();
   }
 }
+
+void checkInput() {
+  if(aBut) {
+//  if(charStatus == CHAR_RUN) {
+      if(bulletCount < BULLET_MAX) {
+        for(int i=0; i<BULLET_MAX; i++) {
+          if(bulletX[i] < 1) {
+            bulletX[bulletCount] = BULLET_START_X - BULLET_MOVE;
+//          charStatus = CHAR_FIRE;
+            bulletCount++;
+          }
+        }
+//    }
+    }
+  }
+}
+
+void updateMove() {
+  
+  // Make obstacle
+  if(obstacleCount < OBSTACLE_MAX && millis() > obstacleTime) {
+    // Make obstacle
+    for(int i=0; i<OBSTACLE_MAX; i++) {
+      if(obstacleX[i] < 1) {
+        obstacleX[i] = 127;
+        obstacleCount++;
+        obstacleTime = getRandTime(); // Reserve next obstacle
+        break;
+      }
+    }
+  }
+
+  // Obstacle move
+  if(obstacleCount > 0) {
+    for(int i=0; i<OBSTACLE_MAX; i++) {
+      if(obstacleX[i] > 0) {
+        obstacleX[i] -= OBSTACLE_MOVE;
+        if(obstacleX[i] < OBSTACLE_DEL_THRESHOLD) {
+          // clear last drawing
+          display.fillRect(obstacleX[i] + OBSTACLE_MOVE, OBS_POS_Y, OBSTACLE_WIDTH, OBSTACLE_HEIGHT, BLACK);
+          
+          // delete obstacle
+          obstacleX[i] = 0;
+          obstacleCount--;
+//          gameScore += OBSTACLE_SCORE;
+        }
+      }
+    }
+  }
+
+  // Make enemy
+  if(enemyCount < ENEMY_MAX && millis() > enemyTime) {
+    // Make enemy
+    for(int i=0; i<ENEMY_MAX; i++) {
+      if(enemyX[i] < 1) {
+        enemyX[i] = 127;
+        enemyCount++;
+        enemyTime = ENEMY_DELAY + getRandTime();  // Reserve next enemy
+        break;
+      }
+    }
+  }
+  
+  // Enemy move
+  if(enemyCount > 0) {
+    for(int i=0; i<ENEMY_MAX; i++) {
+      if(enemyX[i] > 0) {
+        enemyX[i] -= ENEMY_MOVE;
+        if(enemyX[i] < OBSTACLE_DEL_THRESHOLD) {
+          // clear last drawing
+          display.fillRect(enemyX[i] + ENEMY_MOVE, ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT-4, BLACK);
+          
+          // delete enemy
+          enemyX[i] = 0;
+          enemyCount--;
+        }
+      }
+    }
+  }
+
+  // Make bone
+  if(boneCount < BONE_MAX && millis() > boneTime) {
+    // Make obstacle
+    for(int i=0; i<BONE_MAX; i++) {
+      if(boneX[i] < 1) {
+        boneX[i] = 127;
+        boneCount++;
+        boneTime = getRandTime(); // Reserve next obstacle
+        break;
+      }
+    }
+  }
+
+  // Bone move
+  if(boneCount > 0) {
+    for(int i=0; i<BONE_MAX; i++) {
+      if(boneX[i] > 0) {
+        boneX[i] -= BONE_MOVE;
+        if(boneX[i] < BONE_DEL_THRESHOLD) {
+          // clear last drawing
+          display.fillRect(boneX[i] + BONE_MOVE, BONE_POS_Y, BONE_WIDTH, BONE_HEIGHT, BLACK);
+          
+          // delete obstacle
+          boneX[i] = 0;
+          boneCount--;
+//          gameScore += OBSTACLE_SCORE;
+        }
+      }
+    }
+  }
+
+}
+
+void draw() {
+  // draw background
+  if(drawBg) {
+    display.clearDisplay();
+    display.drawBitmap(0, 0, background, 128, 64, 1);
+    drawBg = false;
+  }
+
+  // draw obstacle
+  if(obstacleCount > 0) {
+    for(int i=0; i<OBSTACLE_MAX; i++) {
+      if(obstacleX[i] > 0) {
+        display.fillRect(obstacleX[i] + OBSTACLE_MOVE, OBS_POS_Y, OBSTACLE_WIDTH, OBSTACLE_HEIGHT, BLACK);  // clear previous drawing
+        display.fillRect(obstacleX[i], OBS_POS_Y, OBSTACLE_WIDTH, OBSTACLE_HEIGHT, WHITE);
+      }
+    }
+  }
+  
+  if(enemyCount > 0) {
+    for(int i=0; i<ENEMY_MAX; i++) {
+      if(enemyX[i] == -1) {
+        // Enemy dead image
+        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT-4, BLACK);  // clear previous drawing
+        display.drawBitmap(prevEnemyPosX[i], ENEMY_POS_Y, (const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_DIE_IMAGE_INDEX])), ENEMY_WIDTH, ENEMY_HEIGHT, WHITE);
+        enemyX[i] = -2;
+      }
+      else if(enemyX[i] == -2) {
+        // Clear enemy drawing
+        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT, BLACK);  // clear previous drawing
+        enemyX[i] = 0;
+        enemyCount--;
+      }
+      else if(enemyX[i] > 0) {
+        // Enemy running image
+        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT-4, BLACK);  // clear previous drawing
+        display.drawBitmap(enemyX[i], ENEMY_POS_Y, (const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])), ENEMY_WIDTH, ENEMY_HEIGHT, WHITE);
+        prevEnemyPosX[i] = enemyX[i];
+      }
+    }
+  }
+
+  // draw bone
+  if(boneCount > 0) {
+    for(int i=0; i<BONE_MAX; i++) {
+      if(boneX[i] > 0) {
+        display.fillRect(prevBonePosX[i], BONE_POS_Y, BONE_WIDTH, BONE_HEIGHT, BLACK);  // clear previous drawing
+        display.drawBitmap(boneX[i], BONE_POS_Y, bone, BONE_WIDTH, BONE_HEIGHT, WHITE);
+        prevBonePosX[i] = boneX[i];
+      }
+    }
+  }
+  
+  
+  display.display();
+}
+
+//=========================================================================================================
 
 void initUserInput() {
   left = false;
@@ -217,5 +457,13 @@ void setCreditMode() {
   delay(200);
 }
 
+void setGameMode() {
+  gameState = STATUS_PLAYING;
+  drawBg = true;
+  delay(200);
+}
 
+unsigned long getRandTime() {
+  return millis() + 100 * random(12, 30);
+}
 
