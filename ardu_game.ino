@@ -52,7 +52,7 @@ int prevGameScore = 0;
 int gameHighScore = 0;
 #define OBSTACLE_SCORE 1
 #define ENEMY_KILL_SCORE 2
-#define ITEM_SCORE 5
+#define ITEM_SCORE 2
 
 // Input
 #define BUTTON_A 5
@@ -62,9 +62,10 @@ bool up, down, left, right, aBut, bBut;
 
 // Menu
 #define MENU_START 1
-#define MENU_CREDIT 2
+#define MENU_OPTION 2
+#define MENU_CREDIT 3
 #define MENU_MIN 1
-#define MENU_MAX 2
+#define MENU_MAX 3
 int prevMenu = MENU_MAX;
 int currentMenu = 0;
 
@@ -141,8 +142,8 @@ unsigned long bulletTime;
 
 #define BONE_MAX 3
 #define BONE_MOVE 4
-#define BONE_WIDTH 16
-#define BONE_HEIGHT 16
+#define BONE_WIDTH 8
+#define BONE_HEIGHT 8
 #define BONE_POS_Y 15
 #define BONE_START_X 128
 #define BONE_DEL_THRESHOLD 10
@@ -210,8 +211,8 @@ void setup() {
   display.clearDisplay(); 
   display.drawBitmap(5,28,lobby,32,32,1);
   display.drawBitmap(35,-3,title,64,64,1);
-  display.drawBitmap(100,22,skeleton,32,32,1);
-  display.drawBitmap(108,8,bone,16,16,1);
+  display.drawBitmap(100,22,(const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])),16,16,1);
+  display.drawBitmap(108,8,bone,8,8,1);
   display.drawBitmap(0,0,background1,64,64,1);
   display.drawBitmap(64,0,background2,64,64,1);
   display.display();
@@ -273,10 +274,10 @@ void loop() {
       // Draw game screen
       draw();
 
-      // Exit condition
       if(charStatus == CHAR_DIE) {
         setResultMode();
       }
+      
     }
     else if (gameState == STATUS_RESULT) {  // Draw a Game Over screen w/ score
       gameScore += (int)((millis() - startTime) / 1000);
@@ -314,14 +315,14 @@ void loop() {
       display.clearDisplay();
       display.drawBitmap(5,28,lobby,32,32,1);
       display.drawBitmap(35,-3,title,64,64,1);
-      display.drawBitmap(100,22,skeleton,32,32,1);
-      display.drawBitmap(108,8,bone,16,16,1);
+      display.drawBitmap(100,22,(const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])),16,16,1);
+      display.drawBitmap(108,8,bone,8,8,1);
       display.drawBitmap(0,0,background2,64,64,1);
       display.drawBitmap(64,0,background2,64,64,1);
       
-      display.setCursor(0, 0);
+      display.setCursor(0,0);
       display.print("MADE");
-      display.setCursor(0,12);
+      display.setCursor(0,5);
       display.print("by P&L");
       
       display.display();
@@ -468,7 +469,6 @@ void updateMove(){
           // delete obstacle
           boneX[i] = 0;
           boneCount--;
-//          gameScore += OBSTACLE_SCORE;
         }
       }
     }
@@ -509,7 +509,7 @@ void checkCollision() {
       }
     }
   }
-  
+
   // check enemy touch
   if(enemyCount > 0) {
     for(int i=0; i<ENEMY_MAX; i++) {
@@ -518,6 +518,21 @@ void checkCollision() {
           // Character touched enemy. End game
           charStatus = CHAR_DIE;
           break;
+        }
+      }
+    }
+  }
+
+  //check bone touch
+  if(boneCount > 0) {
+    for(int i=0; i<BONE_MAX; i++) {
+      if(boneX[i] > 0) {
+        if(boneX[i] <= prevPosX + CHAR_WIDTH 
+        && prevPosY + CHAR_COLLISION_MARGIN <= BONE_POS_Y + BONE_HEIGHT) {
+        display.fillRect(boneX[i] + BONE_MOVE, BONE_POS_Y, BONE_WIDTH, BONE_HEIGHT, BLACK);        
+        boneX[i] = 0;
+        boneCount--;
+        gameScore += ITEM_SCORE;
         }
       }
     }
@@ -596,6 +611,18 @@ void draw() {
     }
   }
   
+  // Character death animation
+  if(charStatus == CHAR_DIE) {
+    // Start game end drawing
+    for(int i=prevPosY; i<=CHAR_POS_Y; i++) {
+      display.fillRect(CHAR_POS_X, i, 32, 32, BLACK);
+      display.drawBitmap(CHAR_POS_X, i, (const unsigned char*)pgm_read_word(&(char_anim[DIE_IMAGE_INDEX])), 32, 32, WHITE);
+      display.display();
+    }
+    delay(400);
+    return;
+  }
+
   // draw bone
   if(boneCount > 0) {
     for(int i=0; i<BONE_MAX; i++) {
@@ -667,7 +694,7 @@ void setMenuMode() {
 }
 
 void setGameMode() {
-  gameState = STATUS_PLAYING;
+gameState = STATUS_PLAYING;
   drawBg = true;
   gameScore = 0;
   prevGameScore = -1;
@@ -689,6 +716,12 @@ void setGameMode() {
     prevBulletPosX[i] = 0;
   }
   bulletCount = 0;
+
+  for(int i=0; i<BONE_MAX; i++) {
+    boneX[i] = 0;
+    prevBonePosX[i] = 0;
+  }
+
   startTime = millis();
   obstacleTime = startTime + 2000;
   enemyTime = startTime + 7000;
