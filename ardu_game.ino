@@ -85,7 +85,7 @@ int prevPosY = CHAR_POS_Y;
 #define OBSTACLE_MOVE 3
 #define OBSTACLE_WIDTH 3
 #define OBSTACLE_HEIGHT 4
-#define OBS_POS_Y 59
+#define OBS_POS_Y 58
 #define OBSTACLE_DEL_THRESHOLD 5
 int obstacleX[] = {0, 0, 0};
 int obstacleCount = 0;
@@ -96,7 +96,7 @@ unsigned long obstacleTime;
 #define ENEMY_MOVE 2
 #define ENEMY_WIDTH 32
 #define ENEMY_HEIGHT 32
-#define ENEMY_POS_Y 30
+#define ENEMY_POS_Y 25
 #define ENEMY_START_X 128
 #define ENEMY_RUN_IMAGE_INDEX 0
 #define ENEMY_DIE_IMAGE_INDEX 1
@@ -119,7 +119,7 @@ unsigned long bulletTime;
 #define BONE_MOVE 4
 #define BONE_WIDTH 16
 #define BONE_HEIGHT 16
-#define BONE_POS_Y 10
+#define BONE_POS_Y 15
 #define BONE_START_X 128
 #define BONE_DEL_THRESHOLD 10
 int boneX[] = {0, 0, 0};
@@ -389,7 +389,7 @@ void updateMove(){
         enemyX[i] -= ENEMY_MOVE;
         if(enemyX[i] < OBSTACLE_DEL_THRESHOLD) {
           // clear last drawing
-          display.fillRect(enemyX[i] + ENEMY_MOVE, ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT-4, BLACK);
+          display.fillRect(enemyX[i] + ENEMY_MOVE, ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT, BLACK);
           
           // delete enemy
           enemyX[i] = 0;
@@ -469,7 +469,7 @@ void draw() {
     for(int i=0; i<ENEMY_MAX; i++) {
       if(enemyX[i] == -1) {
         // Enemy dead image
-        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT-4, BLACK);  // clear previous drawing
+        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT, BLACK);  // clear previous drawing
         display.drawBitmap(prevEnemyPosX[i], ENEMY_POS_Y, (const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_DIE_IMAGE_INDEX])), ENEMY_WIDTH, ENEMY_HEIGHT, WHITE);
         enemyX[i] = -2;
       }
@@ -481,7 +481,7 @@ void draw() {
       }
       else if(enemyX[i] > 0) {
         // Enemy running image
-        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT-4, BLACK);  // clear previous drawing
+        display.fillRect(prevEnemyPosX[i], ENEMY_POS_Y, ENEMY_WIDTH, ENEMY_HEIGHT, BLACK);  // clear previous drawing
         display.drawBitmap(enemyX[i], ENEMY_POS_Y, (const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])), ENEMY_WIDTH, ENEMY_HEIGHT, WHITE);
         prevEnemyPosX[i] = enemyX[i];
       }
