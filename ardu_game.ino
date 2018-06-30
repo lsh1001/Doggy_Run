@@ -32,7 +32,7 @@ int eepromAddr = 0;
 // Display variables
 int HEIGHT = 64;
 int WIDTH = 128;
-int gameFPS = 1000/10;
+int gameFPS = 1000/20;
 
 // Time variables
 unsigned long lTime;
@@ -62,10 +62,9 @@ bool up, down, left, right, aBut, bBut;
 
 // Menu
 #define MENU_START 1
-#define MENU_OPTION 2
-#define MENU_CREDIT 3
+#define MENU_CREDIT 2
 #define MENU_MIN 1
-#define MENU_MAX 3
+#define MENU_MAX 2
 int prevMenu = MENU_MAX;
 int currentMenu = 0;
 
@@ -125,6 +124,7 @@ unsigned long obstacleTime;
 #define ENEMY_START_X 128
 #define ENEMY_RUN_IMAGE_INDEX 0
 #define ENEMY_DIE_IMAGE_INDEX 1
+#define ENEMY_COLLISION_MARGIN 1
 int enemyX[] = {0};
 int prevEnemyPosX[] = {0};
 int enemyCount = 0;
@@ -211,8 +211,8 @@ void setup() {
   display.clearDisplay(); 
   display.drawBitmap(5,28,lobby,32,32,1);
   display.drawBitmap(35,-3,title,64,64,1);
-  display.drawBitmap(100,22,(const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])),16,16,1);
-  display.drawBitmap(108,8,bone,8,8,1);
+  display.drawBitmap(105,30,(const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])),16,16,1);
+  display.drawBitmap(108,15,bone,8,8,1);
   display.drawBitmap(0,0,background1,64,64,1);
   display.drawBitmap(64,0,background2,64,64,1);
   display.display();
@@ -280,7 +280,6 @@ void loop() {
       
     }
     else if (gameState == STATUS_RESULT) {  // Draw a Game Over screen w/ score
-      gameScore += (int)((millis() - startTime) / 1000);
       if (gameScore > gameHighScore) { 
         gameHighScore = gameScore; 
         cli();
@@ -315,8 +314,8 @@ void loop() {
       display.clearDisplay();
       display.drawBitmap(5,28,lobby,32,32,1);
       display.drawBitmap(35,-3,title,64,64,1);
-      display.drawBitmap(100,22,(const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])),16,16,1);
-      display.drawBitmap(108,8,bone,8,8,1);
+      display.drawBitmap(105,30,(const unsigned char*)pgm_read_word(&(enemy_anim[ENEMY_RUN_IMAGE_INDEX])),16,16,1);
+      display.drawBitmap(108,15,bone,8,8,1);
       display.drawBitmap(0,0,background2,64,64,1);
       display.drawBitmap(64,0,background2,64,64,1);
       
@@ -514,7 +513,7 @@ void checkCollision() {
   if(enemyCount > 0) {
     for(int i=0; i<ENEMY_MAX; i++) {
       if(enemyX[i] > 0) {
-        if(enemyX[i] <= prevPosX + CHAR_WIDTH) {
+        if(enemyX[i] <= CHAR_WIDTH) {
           // Character touched enemy. End game
           charStatus = CHAR_DIE;
           break;
@@ -652,7 +651,7 @@ void draw() {
     int margin = 120 - getOffset(tempS);
     display.fillRect(margin, 1, 127, 9, BLACK);
     display.setCursor(margin, 1);
-    display.print(tempS);
+    display.print(gameScore);
     prevGameScore = gameScore;
   }
   
@@ -694,7 +693,7 @@ void setMenuMode() {
 }
 
 void setGameMode() {
-gameState = STATUS_PLAYING;
+  gameState = STATUS_PLAYING;
   drawBg = true;
   gameScore = 0;
   prevGameScore = -1;
@@ -703,6 +702,7 @@ gameState = STATUS_PLAYING;
   charAniDir = 1;
   charStatus = CHAR_RUN;
   bulletCount = 0;
+  boneCount = 0;
   delay(300);
   for(int i=0; i<OBSTACLE_MAX; i++) obstacleX[i] = 0;
   obstacleCount = 0;
