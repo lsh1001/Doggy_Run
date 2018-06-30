@@ -10,4 +10,6 @@ extern const unsigned char bone[];
 extern const unsigned char background1[];
 extern const unsigned char background2[];
 extern const unsigned char * const logo[];
+extern const unsigned char * const char_anim[];
+extern const unsigned char* const enemy_anim[];
 #endif
