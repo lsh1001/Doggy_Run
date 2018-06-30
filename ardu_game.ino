@@ -62,10 +62,9 @@ bool up, down, left, right, aBut, bBut;
 
 // Menu
 #define MENU_START 1
-#define MENU_OPTION 2
-#define MENU_CREDIT 3
+#define MENU_CREDIT 2
 #define MENU_MIN 1
-#define MENU_MAX 3
+#define MENU_MAX 2
 int prevMenu = MENU_MAX;
 int currentMenu = 0;
 
@@ -320,9 +319,9 @@ void loop() {
       display.drawBitmap(0,0,background2,64,64,1);
       display.drawBitmap(64,0,background2,64,64,1);
       
-      display.setCursor(0,0);
+      display.setCursor(0, 0);
       display.print("MADE");
-      display.setCursor(0,5);
+      display.setCursor(0,12);
       display.print("by P&L");
       
       display.display();
